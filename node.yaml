@@ -6,7 +6,7 @@ users:
     groups:
       - sudo
     shell: /bin/bash
-    
+#cloud-config
 write-files:
   - path: /opt/bin/wupiao
     permissions: '0755'
@@ -17,49 +17,21 @@ write-files:
         --silent --head --fail \
         http://${1}:${2}; do sleep 1 && echo -n .; done;
       exit $?
-hostname: minion1
 coreos:
   etcd2:
     listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
     advertise-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
-    initial-cluster: master=http://172.16.39.100:2380
+    initial-cluster: master=http://172.16.39.164:2380
     proxy: on
   fleet:
     metadata: "role=node"
   units:
-    - name: systemd-networkd.service
-      command: stop
-    - name: 00-ens160.network
-      runtime: true
-      content: |
-        [Match]
-        Name=ens160
-
-        [Network]
-        DNS=8.8.8.8
-        Address=172.16.39.101/24
-        Gateway=172.16.39.1
-    - name: down-interfaces.service
+    - name: etcd2.service
       command: start
-      content: |
-        [Service]
-        Type=oneshot
-        ExecStart=/usr/bin/ip link set ens160 down
-        ExecStart=/usr/bin/ip addr flush dev ens160
-    - name: systemd-networkd.service
-      command: restart
     - name: fleet.service
       command: start
     - name: flanneld.service
       command: start
-      drop-ins:
-        - name: 50-network-config.conf
-          content: |
-            [Unit]
-            Requires=etcd2.service
-            After=etcd2.service
-            [Service]
-            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{"Network":"10.244.0.0/16" }'
     - name: docker.service
       command: start
     - name: setup-network-environment.service
@@ -70,6 +42,7 @@ coreos:
         Documentation=https://github.com/kelseyhightower/setup-network-environment
         Requires=network-online.target
         After=network-online.target
+
         [Service]
         ExecStartPre=-/usr/bin/mkdir -p /opt/bin
         ExecStartPre=/usr/bin/curl -L -o /opt/bin/setup-network-environment -z /opt/bin/setup-network-environment https://github.com/kelseyhightower/setup-network-environment/releases/download/v1.0.0/setup-network-environment
@@ -82,16 +55,17 @@ coreos:
       content: |
         [Unit]
         Description=Kubernetes Proxy
-        Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+        Documentation=https://github.com/kubernetes/kubernetes
         Requires=setup-network-environment.service
         After=setup-network-environment.service
+
         [Service]
         ExecStartPre=/usr/bin/curl -L -o /opt/bin/kube-proxy -z /opt/bin/kube-proxy https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kube-proxy
         ExecStartPre=/usr/bin/chmod +x /opt/bin/kube-proxy
         # wait for kubernetes master to be up and ready
-        ExecStartPre=/opt/bin/wupiao 172.16.39.100 8080
+        ExecStartPre=/opt/bin/wupiao 172.16.39.164 8080
         ExecStart=/opt/bin/kube-proxy \
-        --master=172.16.39.100:8080 \
+        --master=172.16.39.164:8080 \
         --logtostderr=true
         Restart=always
         RestartSec=10
@@ -100,20 +74,21 @@ coreos:
       content: |
         [Unit]
         Description=Kubernetes Kubelet
-        Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+        Documentation=https://github.com/kubernetes/kubernetes
         Requires=setup-network-environment.service
         After=setup-network-environment.service
+
         [Service]
         EnvironmentFile=/etc/network-environment
         ExecStartPre=/usr/bin/curl -L -o /opt/bin/kubelet -z /opt/bin/kubelet https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kubelet
         ExecStartPre=/usr/bin/chmod +x /opt/bin/kubelet
         # wait for kubernetes master to be up and ready
-        ExecStartPre=/opt/bin/wupiao 172.16.39.100 8080
+        ExecStartPre=/opt/bin/wupiao 172.16.39.164 8080
         ExecStart=/opt/bin/kubelet \
         --address=0.0.0.0 \
         --port=10250 \
         --hostname-override=${DEFAULT_IPV4} \
-        --api-servers=172.16.39.100:8080 \
+        --api-servers=<master-private-ip>:8080 \
         --allow-privileged=true \
         --logtostderr=true \
         --cadvisor-port=4194 \
