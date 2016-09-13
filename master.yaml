@@ -1,6 +1,5 @@
 #cloud-config
 
----
 write-files:
   - path: /etc/conf.d/nfs
     permissions: '0644'
@@ -19,7 +18,18 @@ write-files:
 
 hostname: master
 coreos:
-    units:
+  etcd2:
+    name: master
+    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
+    advertise-client-urls: http://172.16.39.100:2379,http://172.16.39.100:4001
+    initial-cluster-token: k8s_etcd
+    listen-peer-urls: http://172.16.39.100:2380,http://172.16.39.100:7001
+    initial-advertise-peer-urls: http://172.16.39.100:2380
+    initial-cluster: master=http://172.16.39.100:2380
+    initial-cluster-state: new
+  fleet:
+    metadata: "role=master"
+  units:
     - name: systemd-networkd.service
       command: stop
     - name: 00-ens32.network
@@ -41,18 +51,6 @@ coreos:
         ExecStart=/usr/bin/ip addr flush dev ens32
     - name: systemd-networkd.service
       command: restart
-  etcd2:
-    name: master
-    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
-    advertise-client-urls: http://172.16.39.100:2379,http://172.16.39.100:4001
-    initial-cluster-token: k8s_etcd
-    listen-peer-urls: http://172.16.39.100:2380,http://172.16.39.100:7001
-    initial-advertise-peer-urls: http://172.16.39.100:2380
-    initial-cluster: master=http://172.16.39.100:2380
-    initial-cluster-state: new
-  fleet:
-    metadata: "role=master"
-  units:
     - name: etcd2.service
       command: start
     - name: generate-serviceaccount-key.service
