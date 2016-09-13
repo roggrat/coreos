@@ -1,5 +1,13 @@
 #cloud-config
 
+users:
+  - name: core
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDFq8hcIyIy0aHWmwPy+v+PLs8k2Pv++7GqiKJC0RfMxnqssD17Iw/wk8s+U8PsWFezvc2CDeOqvQ+eVjADFi0gHag1K3d/MFYcsJ6T190rALqMJXwv19raRa4+nsehSbqfTUH7DA9TRW4AcHWGcMNUWBqtpBcEGGXWYhCEzZIalCvfprvzbDeic9Tsax397PAVx2JJv0VM58qMiFNTW/j4vVBNI8fJbUjlP+T8KqM4FKS+/SW6wefOepL4Mm+NfrjAMWY/TBYGGQSUSjdkXHGk6aWKZ/weAVyEl+o8RhkE+d/C9E9woiBIJsj6D1nowYTP+n9lSXJXCeL4esnEUDFR dwayne@Reflex.local
+    groups:
+      - sudo
+    shell: /bin/bash
+
 write-files:
   - path: /etc/conf.d/nfs
     permissions: '0644'
@@ -15,7 +23,6 @@ write-files:
           sleep 1 && echo .;
         done;
       exit $?
-
 hostname: master
 coreos:
   etcd2:
@@ -37,7 +44,7 @@ coreos:
       content: |
         [Match]
         Name=ens32
-        
+
         [Network]
         DNS=8.8.8.8
         Address=172.16.39.100/24
@@ -51,14 +58,11 @@ coreos:
         ExecStart=/usr/bin/ip addr flush dev ens32
     - name: systemd-networkd.service
       command: restart
-    - name: etcd2.service
-      command: start
     - name: generate-serviceaccount-key.service
       command: start
       content: |
         [Unit]
         Description=Generate service-account key file
-
         [Service]
         ExecStartPre=-/usr/bin/mkdir -p /opt/bin
         ExecStart=/bin/openssl genrsa -out /opt/bin/kube-serviceaccount.key 2048 2>/dev/null
@@ -72,7 +76,6 @@ coreos:
         Documentation=https://github.com/kelseyhightower/setup-network-environment
         Requires=network-online.target
         After=network-online.target
-
         [Service]
         ExecStartPre=-/usr/bin/mkdir -p /opt/bin
         ExecStartPre=/usr/bin/curl -L -o /opt/bin/setup-network-environment -z /opt/bin/setup-network-environment https://github.com/kelseyhightower/setup-network-environment/releases/download/v1.0.0/setup-network-environment
@@ -89,8 +92,9 @@ coreos:
           content: |
             [Unit]
             Requires=etcd2.service
+            After=etcd2.service
             [Service]
-            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{"Network":"10.244.0.0/16", "Backend": {"Type": "vxlan"}}'
+            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{"Network":"10.244.0.0/16" }'
     - name: docker.service
       command: start
     - name: kube-apiserver.service
@@ -98,10 +102,9 @@ coreos:
       content: |
         [Unit]
         Description=Kubernetes API Server
-        Documentation=https://github.com/kubernetes/kubernetes
+        Documentation=https://github.com/GoogleCloudPlatform/kubernetes
         Requires=setup-network-environment.service etcd2.service generate-serviceaccount-key.service
         After=setup-network-environment.service etcd2.service generate-serviceaccount-key.service
-
         [Service]
         EnvironmentFile=/etc/network-environment
         ExecStartPre=-/usr/bin/mkdir -p /opt/bin
@@ -111,7 +114,7 @@ coreos:
         ExecStart=/opt/bin/kube-apiserver \
         --service-account-key-file=/opt/bin/kube-serviceaccount.key \
         --service-account-lookup=false \
-        --admission-control=NamespaceLifecycle,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota \
+        --admission-control=NamespaceLifecycle,NamespaceAutoProvision,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota \
         --runtime-config=api/v1 \
         --allow-privileged=true \
         --insecure-bind-address=0.0.0.0 \
@@ -129,10 +132,9 @@ coreos:
       content: |
         [Unit]
         Description=Kubernetes Controller Manager
-        Documentation=https://github.com/kubernetes/kubernetes
+        Documentation=https://github.com/GoogleCloudPlatform/kubernetes
         Requires=kube-apiserver.service
         After=kube-apiserver.service
-
         [Service]
         ExecStartPre=/usr/bin/curl -L -o /opt/bin/kube-controller-manager -z /opt/bin/kube-controller-manager https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kube-controller-manager
         ExecStartPre=/usr/bin/chmod +x /opt/bin/kube-controller-manager
@@ -147,10 +149,9 @@ coreos:
       content: |
         [Unit]
         Description=Kubernetes Scheduler
-        Documentation=https://github.com/kubernetes/kubernetes
+        Documentation=https://github.com/GoogleCloudPlatform/kubernetes
         Requires=kube-apiserver.service
         After=kube-apiserver.service
-
         [Service]
         ExecStartPre=/usr/bin/curl -L -o /opt/bin/kube-scheduler -z /opt/bin/kube-scheduler https://storage.googleapis.com/kubernetes-release/release/v1.1.2/bin/linux/amd64/kube-scheduler
         ExecStartPre=/usr/bin/chmod +x /opt/bin/kube-scheduler
