@@ -88,7 +88,7 @@ coreos:
         --address=0.0.0.0 \
         --port=10250 \
         --hostname-override=${DEFAULT_IPV4} \
-        --api-servers=<master-private-ip>:8080 \
+        --api-servers=172.16.39.164:8080 \
         --allow-privileged=true \
         --logtostderr=true \
         --cadvisor-port=4194 \
