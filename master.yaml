@@ -37,27 +37,27 @@ coreos:
   fleet:
     metadata: "role=master"
   units:
-    - name: systemd-networkd.service
-      command: stop
-    - name: 00-ens32.network
-      runtime: true
-      content: |
-        [Match]
-        Name=ens32
-
-        [Network]
-        DNS=8.8.8.8
-        Address=172.16.39.100/24
-        Gateway=172.16.39.1
-    - name: down-interfaces.service
-      command: start
-      content: |
-        [Service]
-        Type=oneshot
-        ExecStart=/usr/bin/ip link set ens32 down
-        ExecStart=/usr/bin/ip addr flush dev ens32
-    - name: systemd-networkd.service
-      command: restart
+#    - name: systemd-networkd.service
+#      command: stop
+#    - name: 00-ens32.network
+#      runtime: true
+#      content: |
+#        [Match]
+#        Name=ens32
+#
+#        [Network]
+#        DNS=8.8.8.8
+#        Address=172.16.39.100/24
+#        Gateway=172.16.39.1
+#    - name: down-interfaces.service
+#      command: start
+#      content: |
+#        [Service]
+#        Type=oneshot
+#        ExecStart=/usr/bin/ip link set ens32 down
+#        ExecStart=/usr/bin/ip addr flush dev ens32
+#    - name: systemd-networkd.service
+#      command: restart
     - name: generate-serviceaccount-key.service
       command: start
       content: |
