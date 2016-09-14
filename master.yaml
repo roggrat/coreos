@@ -39,11 +39,11 @@ coreos:
   units:
     - name: systemd-networkd.service
       command: stop
-    - name: 00-ens32.network
+    - name: 00-ens33.network
       runtime: true
       content: |
         [Match]
-        Name=ens32
+        Name=ens33
 
         [Network]
         DNS=8.8.8.8
