@@ -54,8 +54,8 @@ coreos:
       content: |
         [Service]
         Type=oneshot
-        ExecStart=/usr/bin/ip link set ens32 down
-        ExecStart=/usr/bin/ip addr flush dev ens32
+        ExecStart=/usr/bin/ip link set ens33 down
+        ExecStart=/usr/bin/ip addr flush dev ens33
     - name: systemd-networkd.service
       command: restart
     - name: generate-serviceaccount-key.service
