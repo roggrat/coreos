@@ -48,7 +48,7 @@ coreos:
         [Network]
         DNS=8.8.8.8
         Address=172.16.39.100/24
-        Gateway=172.16.39.1
+        Gateway=172.16.39.2
     - name: down-interfaces.service
       command: start
       content: |
