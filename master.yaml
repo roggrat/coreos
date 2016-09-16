@@ -122,7 +122,7 @@ coreos:
         --service-account-key-file=/opt/bin/kube-serviceaccount.key \
         --service-account-lookup=false \
         --admission-control=NamespaceLifecycle,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota \
-        --runtime-config=extensions/v1beta1/deployments=true
+        --runtime-config=api/v1,extensions/v1beta1/deployments=true
         --allow-privileged=true \
         --insecure-bind-address=0.0.0.0 \
         --insecure-port=8080 \
