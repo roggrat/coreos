@@ -1,0 +1,9 @@
+#cloud-config
+
+users:
+  - name: core
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDFq8hcIyIy0aHWmwPy+v+PLs8k2Pv++7GqiKJC0RfMxnqssD17Iw/wk8s+U8PsWFezvc2CDeOqvQ+eVjADFi0gHag1K3d/MFYcsJ6T190rALqMJXwv19raRa4+nsehSbqfTUH7DA9TRW4AcHWGcMNUWBqtpBcEGGXWYhCEzZIalCvfprvzbDeic9Tsax397PAVx2JJv0VM58qMiFNTW/j4vVBNI8fJbUjlP+T8KqM4FKS+/SW6wefOepL4Mm+NfrjAMWY/TBYGGQSUSjdkXHGk6aWKZ/weAVyEl+o8RhkE+d/C9E9woiBIJsj6D1nowYTP+n9lSXJXCeL4esnEUDFR dwayne@Reflex.local
+    groups:
+      - sudo
+    shell: /bin/bash
