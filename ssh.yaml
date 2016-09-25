@@ -94,4 +94,14 @@ coreos:
             After=etcd2.service
             [Service]
             ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{"Network":"10.244.0.0/16", "Backend": {"Type": "vxlan"}}'
-
+    - name: docker.service
+      drop-ins:
+        - name: 50-flannel.conf
+          content: |
+            [Unit]
+            Requires=flanneld.service
+            After=flanneld.service
+      command: start
+  update:
+    group: alpha
+    reboot-strategy: off
