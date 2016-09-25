@@ -7,3 +7,97 @@ users:
     groups:
       - sudo
     shell: /bin/bash
+
+write-files:
+  - path: /etc/conf.d/nfs
+    permissions: '0644'
+    content: |
+      OPTS_RPC_MOUNTD=""
+  - path: /opt/bin/wupiao
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # [w]ait [u]ntil [p]ort [i]s [a]ctually [o]pen
+      [ -n "$1" ] && \
+        until curl -o /dev/null -sIf http://${1}; do \
+          sleep 1 && echo .;
+        done;
+      exit $?
+hostname: master
+coreos:
+  etcd2:
+    name: master
+    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
+    advertise-client-urls: http://172.16.39.100:2379,http://172.16.39.100:4001
+    initial-cluster-token: k8s_etcd
+    listen-peer-urls: http://172.16.39.100:2380,http://172.16.39.100:7001
+    initial-advertise-peer-urls: http://172.16.39.100:2380
+    initial-cluster: master=http://172.16.39.100:2380
+    initial-cluster-state: new
+  fleet:
+    metadata: "role=master"
+  units:
+    - name: systemd-networkd.service
+      command: stop
+    - name: 00-ens33.network
+      runtime: true
+      content: |
+        [Match]
+        Name=ens33
+        [Network]
+        DNS=8.8.8.8
+        Address=172.16.39.100/24
+        Gateway=172.16.39.2
+    - name: down-interfaces.service
+      command: start
+      content: |
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/ip link set ens33 down
+        ExecStart=/usr/bin/ip addr flush dev ens33
+    - name: systemd-networkd.service
+      command: restart
+    - name: generate-serviceaccount-key.service
+      command: start
+      content: |
+        [Unit]
+        Description=Generate service-account key file
+        [Service]
+        ExecStartPre=-/usr/bin/mkdir -p /opt/bin
+        ExecStart=/bin/openssl genrsa -out /opt/bin/kube-serviceaccount.key 2048 2>/dev/null
+        RemainAfterExit=yes
+        Type=oneshot
+    - name: setup-network-environment.service
+      command: start
+      content: |
+        [Unit]
+        Description=Setup Network Environment
+        Documentation=https://github.com/kelseyhightower/setup-network-environment
+        Requires=network-online.target
+        After=network-online.target
+        [Service]
+        ExecStartPre=-/usr/bin/mkdir -p /opt/bin
+        ExecStartPre=/usr/bin/curl -L -o /opt/bin/setup-network-environment -z /opt/bin/setup-network-environment https://github.com/kelseyhightower/setup-network-environment/releases/download/v1.0.0/setup-network-environment
+        ExecStartPre=/usr/bin/chmod +x /opt/bin/setup-network-environment
+        ExecStart=/opt/bin/setup-network-environment
+        RemainAfterExit=yes
+        Type=oneshot
+    - name: fleet.service
+      command: start
+    - name: flanneld.service
+      command: start
+      drop-ins:
+        - name: 50-network-config.conf
+          content: |
+            [Unit]
+            Requires=etcd2.service
+            After=etcd2.service
+            [Service]
+            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{"Network":"10.244.0.0/16", "Backend": {"Type": "vxlan"}}'
+    - name: docker.service
+      drop-ins:
+        - name: 50-flannel.conf
+          content: |
+            [Unit]
+            Requires=flanneld.service
+            After=flanneld.service
